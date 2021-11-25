@@ -19,6 +19,7 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import h5py
 import faiss
+import timeit
 
 from tensorboardX import SummaryWriter
 import numpy as np
@@ -44,11 +45,11 @@ parser.add_argument('--momentum', type=float, default=0.9, help='Momentum for SG
 parser.add_argument('--nocuda', action='store_true', help='Dont use cuda')
 parser.add_argument('--threads', type=int, default=8, help='Number of threads for each data loader to use')
 parser.add_argument('--seed', type=int, default=123, help='Random seed to use.')
-parser.add_argument('--dataPath', type=str, default='/nfs/ibrahimi/data/', help='Path for centroid data.')
-parser.add_argument('--runsPath', type=str, default='/nfs/ibrahimi/runs/', help='Path to save runs to.')
+parser.add_argument('--dataPath', type=str, default='data/', help='Path for centroid data.')
+parser.add_argument('--runsPath', type=str, default='runs/', help='Path to save runs to.')
 parser.add_argument('--savePath', type=str, default='checkpoints', 
         help='Path to save checkpoints to in logdir. Default=checkpoints/')
-parser.add_argument('--cachePath', type=str, default=environ['TMPDIR'], help='Path to save cache to.')
+parser.add_argument('--cachePath', type=str, default='/tmp/', help='Path to save cache to.')
 parser.add_argument('--resume', type=str, default='', help='Path to load checkpoint from, for resuming training or testing.')
 parser.add_argument('--ckpt', type=str, default='latest', 
         help='Resume from latest or best checkpoint.', choices=['latest', 'best'])
@@ -333,6 +334,7 @@ if __name__ == "__main__":
         raise Exception("No GPU found, please run with --nocuda")
 
     device = torch.device("cuda" if cuda else "cpu")
+    print(cuda)
 
     random.seed(opt.seed)
     np.random.seed(opt.seed)
@@ -405,6 +407,7 @@ if __name__ == "__main__":
     model = nn.Module() 
     model.add_module('encoder', encoder)
 
+
     if opt.mode.lower() != 'cluster':
         if opt.pooling.lower() == 'netvlad':
             net_vlad = netvlad.NetVLAD(num_clusters=opt.num_clusters, dim=encoder_dim, vladv2=opt.vladv2)
@@ -434,6 +437,7 @@ if __name__ == "__main__":
             raise ValueError('Unknown pooling type: ' + opt.pooling)
 
     isParallel = False
+    print('=> Number of CUDA devices = ' + str(torch.cuda.device_count()))
     if opt.nGPU > 1 and torch.cuda.device_count() > 1:
         model.encoder = nn.DataParallel(model.encoder)
         if opt.mode.lower() != 'cluster':
@@ -442,7 +446,7 @@ if __name__ == "__main__":
 
     if not opt.resume:
         model = model.to(device)
-    
+
     if opt.mode.lower() == 'train':
         if opt.optim.upper() == 'ADAM':
             optimizer = optim.Adam(filter(lambda p: p.requires_grad, 

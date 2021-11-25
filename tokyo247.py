@@ -12,11 +12,11 @@ from PIL import Image
 from sklearn.neighbors import NearestNeighbors
 import h5py
 
-root_dir = '/nfs/ibrahimi/data/pittsburgh/'
+root_dir = '/home/lajoiepy/Documents/datasets/PIT250K/data.ciirc.cvut.cz/public/projects/2015netVLAD/Pittsburgh250k/'
 if not exists(root_dir):
     raise FileNotFoundError('root_dir is hardcoded, please adjust to point to Pittsburgh dataset')
 
-struct_dir = join(root_dir, 'datasets/')
+struct_dir = "/home/lajoiepy/Documents/datasets/PIT250K/data.ciirc.cvut.cz/public/projects/2015netVLAD/Specs/netvlad_v100_datasets/datasets/" #join(root_dir, 'datasets/')
 #queries_dir = join(root_dir, 'queries_real')
 
 def input_transform():

@@ -1,0 +1,6 @@
+centroids/*
+runs/*
+tmp/*
+.vscode/
+__pycache__/
+data/
