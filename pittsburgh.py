@@ -227,7 +227,8 @@ class QueryDatasetFromStruct(data.Dataset):
             negSample = np.random.choice(self.potential_negatives[index], self.nNegSample)
             negSample = np.unique(np.concatenate([self.negCache[index], negSample]))
 
-            negFeat = h5feat[negSample.tolist()]
+            indices = [int(item) for item in negSample.tolist()]
+            negFeat = h5feat[indices]
             knn.fit(negFeat)
 
             dNeg, negNN = knn.kneighbors(qFeat.reshape(1,-1), 

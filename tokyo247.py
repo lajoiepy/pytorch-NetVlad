@@ -12,12 +12,13 @@ from PIL import Image
 from sklearn.neighbors import NearestNeighbors
 import h5py
 
-root_dir = '/home/lajoiepy/Documents/datasets/PIT250K/data.ciirc.cvut.cz/public/projects/2015netVLAD/Pittsburgh250k/'
+root_dir = '/home/lajoiepy/Documents/datasets/Tokyo24-7/database_gsv_vga/data.ciirc.cvut.cz/public/projects/2015netVLAD/Tokyo247/database_gsv_vga/'
 if not exists(root_dir):
     raise FileNotFoundError('root_dir is hardcoded, please adjust to point to Pittsburgh dataset')
 
 struct_dir = "/home/lajoiepy/Documents/datasets/PIT250K/data.ciirc.cvut.cz/public/projects/2015netVLAD/Specs/netvlad_v100_datasets/datasets/" #join(root_dir, 'datasets/')
 #queries_dir = join(root_dir, 'queries_real')
+queries_dir = "/home/lajoiepy/Documents/datasets/Tokyo24-7/queries/data.ciirc.cvut.cz/public/projects/2015netVLAD/Tokyo247/queries/"
 
 def input_transform():
     return transforms.Compose([
@@ -70,7 +71,7 @@ def parse_dbStruct(path):
     posDistSqThr = matStruct[10].item()
     nonTrivPosDistSqThr = matStruct[11].item()
 
-    return dbStruct(whichSet, dataset, dbImage, utmDb, qImage, 
+    return dbStruct(whichSet, "tokyo", dbImage, utmDb, qImage, 
             utmQ, numDb, numQ, posDistThr, 
             posDistSqThr, nonTrivPosDistSqThr)
 

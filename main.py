@@ -5,6 +5,12 @@ import random, shutil, json
 from os.path import join, exists, isfile, realpath, dirname
 from os import makedirs, remove, chdir, environ
 
+# To remove predatory warnings from scikit-learn
+def warn(*args, **kwargs):
+    pass
+import warnings
+warnings.warn = warn
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -57,7 +63,7 @@ parser.add_argument('--evalEvery', type=int, default=1,
         help='Do a validation set run, and save, every N epochs.')
 parser.add_argument('--patience', type=int, default=10, help='Patience for early stopping. 0 is off.')
 parser.add_argument('--dataset', type=str, default='pittsburgh', 
-        help='Dataset to use', choices=['pittsburgh'])
+        help='Dataset to use', choices=['pittsburgh', 'tokyo'])
 parser.add_argument('--arch', type=str, default='vgg16', 
         help='basenetwork to use', choices=['vgg16', 'alexnet'])
 parser.add_argument('--vladv2', action='store_true', help='Use VLAD v2')
@@ -105,7 +111,7 @@ def train(epoch):
 
         training_data_loader = DataLoader(dataset=sub_train_set, num_workers=opt.threads, 
                     batch_size=opt.batchSize, shuffle=True, 
-                    collate_fn=dataset.collate_fn, pin_memory=cuda)
+                    collate_fn=dataset.collate_fn, pin_memory=False)
 
         print('Allocated:', torch.cuda.memory_allocated())
         print('Cached:', torch.cuda.memory_cached())
@@ -173,7 +179,7 @@ def test(eval_set, epoch=0, write_tboard=False):
     # TODO what if features dont fit in memory? 
     test_data_loader = DataLoader(dataset=eval_set, 
                 num_workers=opt.threads, batch_size=opt.cacheBatchSize, shuffle=False, 
-                pin_memory=cuda)
+                pin_memory=False)
 
     model.eval()
     with torch.no_grad():
@@ -187,7 +193,7 @@ def test(eval_set, epoch=0, write_tboard=False):
             image_encoding = model.encoder(input)
             vlad_encoding = model.pool(image_encoding) 
 
-            dbFeat[indices.detach().numpy(), :] = vlad_encoding.detach().cpu().numpy()
+            dbFeat[indices.detach().numpy(), :] = vlad_encoding.detach().cpu().numpy() # compute NetVLAD vector
             if iteration % 50 == 0 or len(test_data_loader) <= 10:
                 print("==> Batch ({}/{})".format(iteration, 
                     len(test_data_loader)), flush=True)
@@ -237,7 +243,7 @@ def get_clusters(cluster_set):
     sampler = SubsetRandomSampler(np.random.choice(len(cluster_set), nIm, replace=False))
     data_loader = DataLoader(dataset=cluster_set, 
                 num_workers=opt.threads, batch_size=opt.cacheBatchSize, shuffle=False, 
-                pin_memory=cuda,
+                pin_memory=False,
                 sampler=sampler)
 
     if not exists(join(opt.dataPath, 'centroids')):
@@ -326,6 +332,8 @@ if __name__ == "__main__":
 
     if opt.dataset.lower() == 'pittsburgh':
         import pittsburgh as dataset
+    elif opt.dataset.lower() == 'tokyo':
+        import tokyo247 as dataset
     else:
         raise Exception('Unknown dataset')
 
@@ -347,7 +355,7 @@ if __name__ == "__main__":
         whole_train_set = dataset.get_whole_training_set()
         whole_training_data_loader = DataLoader(dataset=whole_train_set, 
                 num_workers=opt.threads, batch_size=opt.cacheBatchSize, shuffle=False, 
-                pin_memory=cuda)
+                pin_memory=False)
 
         train_set = dataset.get_training_query_set(opt.margin)
 
