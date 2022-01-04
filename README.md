@@ -85,3 +85,4 @@ The PCA transform is stored in `pca.pkl`, you can reuse it as follows:
 
     pca = pickle.load(open("pca.pkl",'rb'))    
     reduced_embedding = pca.transform(embedding)
+    normalized_embedding = sklearn.preprocessing.normalize(reduced_embedding)
