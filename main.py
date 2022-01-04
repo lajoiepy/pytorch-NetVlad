@@ -30,9 +30,11 @@ import timeit
 from tensorboardX import SummaryWriter
 import numpy as np
 import netvlad
+import sklearn
+import pickle
 
 parser = argparse.ArgumentParser(description='pytorch-NetVlad')
-parser.add_argument('--mode', type=str, default='train', help='Mode', choices=['train', 'test', 'cluster'])
+parser.add_argument('--mode', type=str, default='train', help='Mode', choices=['train', 'test', 'cluster', 'pca'])
 parser.add_argument('--batchSize', type=int, default=4, 
         help='Number of triplets (query, pos, negs). Each triplet consists of 12 images.')
 parser.add_argument('--cacheBatchSize', type=int, default=24, help='Batch size for caching and testing')
@@ -235,6 +237,38 @@ def test(eval_set, epoch=0, write_tboard=False):
 
     return recalls
 
+def pca(eval_set):
+    # TODO what if features dont fit in memory? 
+    test_data_loader = DataLoader(dataset=eval_set, 
+                num_workers=opt.threads, batch_size=opt.cacheBatchSize, shuffle=False, 
+                pin_memory=False)
+
+    model.eval()
+    with torch.no_grad():
+        print('====> Extracting Features')
+        pool_size = encoder_dim
+        if opt.pooling.lower() == 'netvlad': pool_size *= opt.num_clusters
+        dbFeat = np.empty((len(eval_set), pool_size))
+
+        for iteration, (input, indices) in enumerate(test_data_loader, 1):
+            input = input.to(device)
+            image_encoding = model.encoder(input)
+            vlad_encoding = model.pool(image_encoding) 
+
+            dbFeat[indices.detach().numpy(), :] = vlad_encoding.detach().cpu().numpy() # compute NetVLAD vector
+            if iteration % 50 == 0 or len(test_data_loader) <= 10:
+                print("==> Batch ({}/{})".format(iteration, 
+                    len(test_data_loader)), flush=True)
+
+            del input, image_encoding, vlad_encoding
+    del test_data_loader
+
+    # PCA
+    pca = sklearn.decomposition.PCA(4096, whiten=True)
+    pca.fit(dbFeat)
+    pickle.dump(pca, open("pca.pkl","wb"))
+    
+
 def get_clusters(cluster_set):
     nDescriptors = 50000
     nPerImage = 100
@@ -380,6 +414,8 @@ if __name__ == "__main__":
         print('====> Query count:', whole_test_set.dbStruct.numQ)
     elif opt.mode.lower() == 'cluster':
         whole_train_set = dataset.get_whole_training_set(onlyDB=True)
+    elif opt.mode.lower() == 'pca':
+        whole_train_set = dataset.get_whole_training_set()
 
     print('===> Building model')
 
@@ -497,6 +533,9 @@ if __name__ == "__main__":
         print('===> Running evaluation step')
         epoch = 1
         recalls = test(whole_test_set, epoch, write_tboard=False)
+    elif opt.mode.lower() == 'pca':
+        print('===> Running PCA')
+        recalls = pca(whole_train_set)
     elif opt.mode.lower() == 'cluster':
         print('===> Calculating descriptors and clusters')
         get_clusters(whole_train_set)

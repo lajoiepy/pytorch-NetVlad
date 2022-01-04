@@ -74,3 +74,14 @@ necessary for each configuration of the network and for each dataset. To cluster
     python main.py --mode=cluster --arch=vgg16 --pooling=netvlad --num_clusters=64
 
 with the correct values for any additional commandline arguments.
+
+## PCA
+
+For dimensionality reduction, NetVLAD uses PCA + Whitening. To perform PCA run
+
+    python main.py --mode=pca --arch=vgg16 --pooling=netvlad --num_clusters=64
+
+The PCA transform is stored in `pca.pkl`, you can reuse it as follows:
+
+    pca = pickle.load(open("pca.pkl",'rb'))    
+    reduced_embedding = pca.transform(embedding)
